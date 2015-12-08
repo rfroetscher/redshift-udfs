@@ -1,3 +1,51 @@
+    /*
+    YAML helpers
+    These are meant to help acccess the values of one-level-deep persisted ruby hashes with symbol keys.
+    For example:
+    warehouse=# SELECT yaml_timestamp(ruby_persisted_hash, 'activity_time') FROM some_table WHERE ruby_persisted_hash LIKE '%activity_time%' LIMIT 1;
+       yaml_timestamp
+    ---------------------
+     2012-12-01 03:25:49
+    (1 row)
+    In order to make this work, you must upload this directory https://github.com/yaml/pyyaml/tree/master/lib/yaml
+    (zipped) to S3 and reference its location in the CREATE LIBRARY call below.
+    */
+
+    CREATE LIBRARY yaml LANGUAGE plpythonu FROM 'xxxxxxxxxx' CREDENTIALS 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
+
+    CREATE OR REPLACE FUNCTION yaml_timestamp(raw_yaml VARCHAR, key_name VARCHAR)
+      RETURNS TIMESTAMP
+      STABLE AS $$
+        import yaml
+        from yaml.constructor import SafeConstructor
+        yaml.add_constructor('!ruby/object:DateTime', SafeConstructor.construct_yaml_timestamp)
+        hash = yaml.load(raw_yaml)
+        symbol_key = ':' + key_name
+        return hash[symbol_key]
+      $$ LANGUAGE plpythonu;
+
+
+    CREATE OR REPLACE FUNCTION yaml_float(raw_yaml VARCHAR, key_name VARCHAR)
+      RETURNS REAL
+      STABLE AS $$
+        import yaml
+        from yaml.constructor import SafeConstructor
+        yaml.add_constructor('!ruby/object:DateTime', SafeConstructor.construct_yaml_timestamp)
+        hash = yaml.load(raw_yaml)
+        symbol_key = ':' + key_name
+        return hash[symbol_key]
+      $$ LANGUAGE plpythonu;
+
+    CREATE OR REPLACE FUNCTION yaml_string(raw_yaml VARCHAR, key_name VARCHAR)
+      RETURNS VARCHAR
+      STABLE AS $$
+        import yaml
+        from yaml.constructor import SafeConstructor
+        yaml.add_constructor('!ruby/object:DateTime', SafeConstructor.construct_yaml_timestamp)
+        hash = yaml.load(raw_yaml)
+        symbol_key = ':' + key_name
+        return hash[symbol_key]
+      $$ LANGUAGE plpythonu;
 
       /*
       AGG_INIT_BLANK_VARCHAR
@@ -11,7 +59,7 @@
         stable as $$
           return ""
         $$ language plpythonu;
-    
+
 
       /*
       AGG_FINALIZE_VARCHAR
@@ -25,7 +73,7 @@
         stable as $$
           return state
         $$ language plpythonu;
-    
+
 
       /*
       AGG_AGG_NUMBERS_TO_LIST
@@ -46,7 +94,7 @@
             return state
           return state + " " + str(a)
         $$ language plpythonu;
-    
+
 
       /*
       JSON_ARRAY_FIRST
@@ -70,7 +118,7 @@
             return None
           return str(arr[0])
         $$ language plpythonu;
-    
+
 
       /*
       JSON_ARRAY_LAST
@@ -94,7 +142,7 @@
             return None
           return str(arr[-1])
         $$ language plpythonu;
-    
+
 
       /*
       JSON_ARRAY_NTH
@@ -118,7 +166,7 @@
             return None
           return str(arr[i])
         $$ language plpythonu;
-    
+
 
       /*
       JSON_ARRAY_SORT
@@ -144,7 +192,7 @@
             arr = sorted(arr)
           return json.dumps(arr)
         $$ language plpythonu;
-    
+
 
       /*
       JSON_ARRAY_REVERSE
@@ -166,7 +214,7 @@
             return None
           return json.dumps(arr[::-1])
         $$ language plpythonu;
-    
+
 
       /*
       JSON_ARRAY_POP
@@ -190,7 +238,7 @@
             arr.pop()
           return json.dumps(arr)
         $$ language plpythonu;
-    
+
 
       /*
       JSON_ARRAY_PUSH
@@ -214,7 +262,7 @@
           arr.append(value)
           return json.dumps(arr)
         $$ language plpythonu;
-    
+
 
       /*
       JSON_ARRAY_CONCAT
@@ -240,7 +288,7 @@
           arr_j.extend(arr_k)
           return json.dumps(arr_j)
         $$ language plpythonu;
-    
+
 
       /*
       JSON_ARRAY_AGG
@@ -256,7 +304,7 @@
         aggfunc = json_array_push,
         finalizefunc = agg_finalize_varchar
       );
-    
+
 
       /*
       MYSQL_YEAR
@@ -274,7 +322,7 @@
             return None
           return ts.year
         $$ language plpythonu;
-    
+
 
       /*
       MYSQL_MONTH
@@ -292,7 +340,7 @@
             return None
           return ts.month
         $$ language plpythonu;
-    
+
 
       /*
       MYSQL_DAY
@@ -310,7 +358,7 @@
             return None
           return ts.day
         $$ language plpythonu;
-    
+
 
       /*
       MYSQL_HOUR
@@ -328,7 +376,7 @@
             return None
           return ts.hour
         $$ language plpythonu;
-    
+
 
       /*
       MYSQL_MINUTE
@@ -346,7 +394,7 @@
             return None
           return ts.minute
         $$ language plpythonu;
-    
+
 
       /*
       MYSQL_SECOND
@@ -364,7 +412,7 @@
             return None
           return ts.second
         $$ language plpythonu;
-    
+
 
       /*
       MYSQL_YEARWEEK
@@ -383,7 +431,7 @@
           cal = ts.isocalendar()
           return str(cal[0]) + str(cal[1]).zfill(2)
         $$ language plpythonu;
-    
+
 
       /*
       NOW
@@ -398,7 +446,7 @@
           from datetime import datetime
           datetime.utcnow()
         $$ language plpythonu;
-    
+
 
       /*
       POSIX_TIMESTAMP
@@ -415,7 +463,7 @@
             return None
           return (ts - datetime(1970, 1, 1)).total_seconds()
         $$ language plpythonu;
-    
+
 
       /*
       EMAIL_NAME
@@ -432,7 +480,7 @@
             return None
           return email.split('@')[0]
         $$ language plpythonu;
-    
+
 
       /*
       EMAIL_DOMAIN
@@ -449,7 +497,7 @@
             return None
           return email.split('@')[-1]
         $$ language plpythonu;
-    
+
 
       /*
       URL_PROTOCOL
@@ -472,7 +520,7 @@
           except ValueError:
             return None
         $$ language plpythonu;
-    
+
 
       /*
       URL_DOMAIN
@@ -494,7 +542,7 @@
           except ValueError:
             return None
         $$ language plpythonu;
-    
+
 
       /*
       URL_PATH
@@ -516,7 +564,7 @@
           except ValueError:
             return None
         $$ language plpythonu;
-    
+
 
       /*
       URL_PARAM
@@ -538,7 +586,7 @@
           except KeyError:
             return None
         $$ language plpythonu;
-    
+
 
       /*
       SPLIT_COUNT
@@ -555,7 +603,7 @@
             return None
           return len(str.split(delim))
         $$ language plpythonu;
-    
+
 
       /*
       TITLECASE
@@ -572,7 +620,7 @@
             return None
           return str.title()
         $$ language plpythonu;
-    
+
 
       /*
       STR_MULTIPLY
@@ -589,7 +637,7 @@
             return None
           return str * times
         $$ language plpythonu;
-    
+
 
       /*
       STR_INDEX
@@ -606,7 +654,7 @@
             return None
           return full_str.find(find_substr)
         $$ language plpythonu;
-    
+
 
       /*
       STR_RINDEX
@@ -624,7 +672,7 @@
             return None
           return full_str.rfind(find_substr)
         $$ language plpythonu;
-    
+
 
       /*
       STR_COUNT
@@ -642,7 +690,7 @@
             return None
           return full_str.count(find_substr)
         $$ language plpythonu;
-    
+
 
       /*
       AGG_AGG_COMMA_CONCAT
@@ -661,7 +709,7 @@
             return state
           return state + "," + a
         $$ language plpythonu;
-    
+
 
       /*
       COMMA_CONCAT
@@ -677,7 +725,7 @@
         aggfunc = agg_agg_comma_concat,
         finalizefunc = agg_finalize_varchar
       );
-    
+
 
       /*
       FORMAT_NUM
@@ -702,7 +750,7 @@
             except ValueError:
               return None
         $$ language plpythonu;
-    
+
 
       /*
       AGG_FINALIZE_HARMONIC_MEAN
@@ -723,7 +771,7 @@
             return None
           return len(nums) / sum(1.0 / v for v in nums)
         $$ language plpythonu;
-    
+
 
       /*
       HARMONIC_MEAN
@@ -739,7 +787,7 @@
         aggfunc = agg_agg_numbers_to_list,
         finalizefunc = agg_finalize_harmonic_mean
       );
-    
+
 
       /*
       AGG_FINALIZE_SECOND_MAX
@@ -761,7 +809,7 @@
             return None
           return sorted(nums)[-2]
         $$ language plpythonu;
-    
+
 
       /*
       SECOND_MAX
@@ -777,7 +825,7 @@
         aggfunc = agg_agg_numbers_to_list,
         finalizefunc = agg_finalize_second_max
       );
-    
+
 
       /*
       EXPERIMENT_RESULT_P_VALUE
@@ -802,4 +850,3 @@
           chisq, p = result[:2]
           return p
         $$ language plpythonu;
-    
